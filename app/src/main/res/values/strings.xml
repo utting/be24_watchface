@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TestWearOS</string>
-    <string name="message">Watch face tapped</string>
-    <string name="my_analog_name">My Analog</string>
+    <string name="app_name">Be24 Watch</string>
+    <string name="message">What will tapping do?</string>
+    <string name="my_analog_name">Be24 Watchface</string>
 </resources>

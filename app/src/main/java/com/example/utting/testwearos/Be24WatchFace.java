@@ -139,7 +139,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private void initializeBackground() {
             mNightPaint = new Paint();
             mNightPaint.setColor(Color.BLACK);
-            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bg);
+            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sunrise);
 
             /* Extracts colors from background image to improve watchface style. */
             Palette.from(mBackgroundBitmap).generate(new Palette.PaletteAsyncListener() {
@@ -149,6 +149,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                         mWatchHandHighlightColor = palette.getVibrantColor(Color.RED);
                         mWatchHandColor = palette.getLightVibrantColor(Color.WHITE);
                         mWatchHandShadowColor = palette.getDarkMutedColor(Color.BLACK);
+                        // Log.d("onGenerated", palette.toString());
                         updateWatchHandStyle();
                     }
                 }
@@ -239,33 +240,40 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 mHandPaint.setColor(Color.WHITE);
                 mHandInnerPaint.setColor(Color.WHITE);
                 mLinePaint.setColor(Color.WHITE);
+                mTextPaint.setColor(Color.WHITE);
                 mMajorPaint.setColor(Color.WHITE);
+                mMinorPaint.setColor(Color.WHITE);
 
                 mHandPaint.setAntiAlias(false);
                 mHandInnerPaint.setAntiAlias(false);
                 mLinePaint.setAntiAlias(false);
                 mMajorPaint.setAntiAlias(false);
+                mMinorPaint.setAntiAlias(false);
 
                 mHandPaint.clearShadowLayer();
                 mHandInnerPaint.clearShadowLayer();
                 mLinePaint.clearShadowLayer();
                 mMajorPaint.clearShadowLayer();
+                mMinorPaint.clearShadowLayer();
 
             } else {
                 mHandPaint.setColor(mWatchHandColor);
                 mHandInnerPaint.setColor(mWatchHandColor);
                 mLinePaint.setColor(mWatchHandHighlightColor);
                 mMajorPaint.setColor(mWatchHandColor);
+                mMinorPaint.setColor(mWatchHandColor);
 
                 mHandPaint.setAntiAlias(true);
                 mHandInnerPaint.setAntiAlias(true);
                 mLinePaint.setAntiAlias(true);
                 mMajorPaint.setAntiAlias(true);
+                mMinorPaint.setAntiAlias(true);
 
                 mHandPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mHandInnerPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mLinePaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mMajorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
+                mMinorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
             }
         }
 
@@ -299,7 +307,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             /*
              * Calculate lengths of hands based on watch screen size.
              */
-            sHourHandLength = (float) (mCenterX * 0.8);
+            sHourHandLength = (float) (mCenterX * 0.85);
 
 
             /* Scale loaded background image (more efficient) if surface dimensions change. */
@@ -368,6 +376,22 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             drawBackground(canvas);
             drawWatchFace(canvas);
+
+
+            /*
+             * These calculations reflect that one hour = 360/24 = 15 degrees.
+             */
+            final float hourHandOffset = mCalendar.get(Calendar.MINUTE) / 2f;
+            final float hoursRotation = (mCalendar.get(Calendar.HOUR) * 15) + hourHandOffset;
+
+            /* Save the canvas state before we can begin to rotate it. */
+            canvas.save();
+            canvas.rotate(hoursRotation, mCenterX, mCenterY);
+
+            drawSimpleHand(canvas, hoursRotation);
+
+            /* Restore the canvas' original orientation. */
+            canvas.restore();
         }
 
         private void drawBackground(Canvas canvas) {
@@ -399,19 +423,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 canvas.drawLine(mCenterX + innerX, mCenterY + innerY,
                         mCenterX + outerX, mCenterY + outerY, mMajorPaint);
             }
+        }
 
-            /*
-             * These calculations reflect that one hour = 360/24 = 15 degrees.
-             */
-            final float hourHandOffset = mCalendar.get(Calendar.MINUTE) / 2f;
-            final float hoursRotation = (mCalendar.get(Calendar.HOUR) * 15) + hourHandOffset;
-
-            /*
-             * Save the canvas state before we can begin to rotate it.
-             */
-            canvas.save();
-
-            canvas.rotate(hoursRotation, mCenterX, mCenterY);
+        private void drawSimpleHand(Canvas canvas, float hoursRotation) {
             canvas.drawLine(
                     mCenterX,
                     mCenterY - CENTER_GAP_AND_CIRCLE_RADIUS,
@@ -424,9 +438,6 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                     mCenterY,
                     CENTER_GAP_AND_CIRCLE_RADIUS,
                     mMajorPaint);
-
-            /* Restore the canvas' original orientation. */
-            canvas.restore();
         }
 
         @Override
