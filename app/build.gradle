@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 28
     defaultConfig {
-        applicationId "com.example.utting.testwearos"
+        applicationId "au.edu.usc.utting.be24_watchface"
         minSdkVersion 26
         targetSdkVersion 28
         versionCode 1
@@ -22,6 +22,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.android.support:wearable:2.4.0'
     implementation 'com.google.android.gms:play-services-wearable:16.0.1'
+    /* implementation 'com.google.android.gms:play-services-location:16.0.0' */
     implementation 'com.android.support:percent:28.0.0'
     implementation 'com.android.support:support-v4:28.0.0'
     implementation 'com.android.support:recyclerview-v7:28.0.0'

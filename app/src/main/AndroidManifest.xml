@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.utting.testwearos">
+    package="au.edu.usc.utting.be24_watchface">
 
     <uses-feature android:name="android.hardware.type.watch" />
 
@@ -19,7 +19,7 @@
             android:value="true" />
 
         <service
-            android:name=".Be24WatchFace"
+            android:name="au.edu.usc.utting.be24_watchface.Be24WatchFace"
             android:label="@string/my_analog_name"
             android:permission="android.permission.BIND_WALLPAPER">
             <meta-data

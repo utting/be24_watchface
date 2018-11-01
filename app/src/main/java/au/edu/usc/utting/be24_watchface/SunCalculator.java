@@ -1,4 +1,4 @@
-package com.example.utting.testwearos;
+package au.edu.usc.utting.be24_watchface;
 
 
 import java.util.Calendar;
