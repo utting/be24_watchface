@@ -47,9 +47,20 @@ import java.util.concurrent.TimeUnit;
  */
 public class Be24WatchFace extends CanvasWatchFaceService {
 
+    // the included photo to use as the background.
+    // If this is set to zero, then BACKGROUND_COLOR will be used instead.
+    private static final int BACKGROUND_RESOURCE = 0;
+    // private static final int BACKGROUND_RESOURCE = R.drawable.bg;
+    // private static final int BACKGROUND_RESOURCE = R.drawable.sunrise;
+
     // some more saturated colours from my sunrise photo.
     private static final int COLOR_DAWN_RED = Color.rgb(255, 120, 60);
     private static final int COLOR_DAWN_BLUE = Color.rgb(90, 145,255);
+    // two related colours that are used, together with white and black.
+    private static final int COLOR_DEEP_BLUE = Color.rgb(10, 40,100);
+    private static final int COLOR_BRIGHT_ORANGE = Color.rgb(230, 130,30);
+    private static final int BACKGROUND_COLOR = COLOR_DEEP_BLUE;
+    private static final int FOREGROUND_COLOR = COLOR_BRIGHT_ORANGE; // complementary
 
     /*
      * Updates rate in milliseconds for interactive mode.
@@ -175,26 +186,28 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
         private void initializeBackground() {
             mBackgroundPaint = new Paint();
-            mBackgroundPaint.setColor(Color.RED); // should not be used, since background is a bitmap.
+            mBackgroundPaint.setColor(COLOR_DEEP_BLUE); // used if no background bitmap.
 
             mNightPaint = new Paint();
             mNightPaint.setColor(Color.argb(180, 0, 0, 0));
             mNightPaint.setStyle(Paint.Style.FILL);
-            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bg);
+            if (BACKGROUND_RESOURCE != 0) {
+                mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), BACKGROUND_RESOURCE);
 
-            /* Extracts colors from background image to improve watchface style. */
-            Palette.from(mBackgroundBitmap).generate(new Palette.PaletteAsyncListener() {
-                @Override
-                public void onGenerated(Palette palette) {
-                    if (palette != null) {
-                        mWatchHandHighlightColor = palette.getVibrantColor(Color.RED);
-                        mWatchHandColor = palette.getLightVibrantColor(Color.WHITE);
-                        mWatchHandShadowColor = palette.getDarkMutedColor(Color.BLACK);
-                        Log.d(TAG, palette.toString());
-                        updateWatchHandStyle();
+                /* Extracts colors from background image to improve watchface style. */
+                Palette.from(mBackgroundBitmap).generate(new Palette.PaletteAsyncListener() {
+                    @Override
+                    public void onGenerated(Palette palette) {
+                        if (palette != null) {
+                            mWatchHandHighlightColor = palette.getVibrantColor(Color.BLUE);
+                            mWatchHandColor = palette.getLightVibrantColor(Color.WHITE);
+                            mWatchHandShadowColor = palette.getDarkMutedColor(Color.BLACK);
+                            Log.d(TAG, palette.toString());
+                            updateWatchHandStyle();
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         /**
@@ -204,44 +217,58 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private void initializeWatchFace() {
             /* Set defaults for colors */
             mWatchHandColor = Color.WHITE;
-            mWatchHandHighlightColor = Color.RED;
+            mWatchHandHighlightColor = FOREGROUND_COLOR;
             mWatchHandShadowColor = Color.BLACK;
 
             mHandPaint = new Paint();
+            mHandPaint.setColor(mWatchHandColor);
             mHandPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
             mHandPaint.setStrokeCap(Paint.Cap.ROUND);
+            mHandPaint.setAntiAlias(true);
 
             mHandInnerPaint = new Paint();
+            mHandInnerPaint.setColor(mWatchHandHighlightColor);
             mHandInnerPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
             mHandInnerPaint.setStrokeCap(Paint.Cap.ROUND);
+            mHandInnerPaint.setAntiAlias(true);
 
             mLinePaint = new Paint();
+            mLinePaint.setColor(mWatchHandHighlightColor);
             mLinePaint.setStrokeWidth(LINE_STROKE_WIDTH);
             mLinePaint.setStyle(Paint.Style.STROKE);
+            mLinePaint.setAntiAlias(true);
 
             mMajorPaint = new Paint();
+            mMajorPaint.setColor(mWatchHandColor);
             mMajorPaint.setStrokeWidth(MAJOR_TICK_STROKE_WIDTH);
             mMajorPaint.setStyle(Paint.Style.STROKE);
+            mMajorPaint.setAntiAlias(true);
 
             mMinorPaint = new Paint();
+            mMinorPaint.setColor(mWatchHandHighlightColor);
             mMinorPaint.setStrokeWidth(MINOR_TICK_STROKE_WIDTH);
             mMinorPaint.setStyle(Paint.Style.STROKE);
+            mMinorPaint.setAntiAlias(true);
 
             mNumbersPaint = new Paint();
+            mNumbersPaint.setColor(mWatchHandHighlightColor);
             mNumbersPaint.setStrokeWidth(LINE_STROKE_WIDTH);
             mNumbersPaint.setAntiAlias(true);
             mNumbersPaint.setStrokeCap(Paint.Cap.BUTT);
             mNumbersPaint.setStyle(Paint.Style.FILL);
             mNumbersPaint.setTypeface(Typeface.SANS_SERIF);
             mNumbersPaint.setTextSize(NUMBERS_FONT_SIZE);
+            mNumbersPaint.setAntiAlias(true);
 
             mLogoPaint = new Paint();
+            mLogoPaint.setColor(mWatchHandHighlightColor);
             mLogoPaint.setStrokeWidth(LINE_STROKE_WIDTH);
             mLogoPaint.setAntiAlias(true);
             mLogoPaint.setStrokeCap(Paint.Cap.BUTT);
             mLogoPaint.setStyle(Paint.Style.FILL);
             mLogoPaint.setTypeface(Typeface.SANS_SERIF);
             mLogoPaint.setTextSize(LOGO_FONT_SIZE);
+            mLogoPaint.setAntiAlias(true);
 
             mLogoOffset = mLogoPaint.measureText(LOGO) / 2f;
         }
@@ -366,24 +393,26 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             mHourHandLength = mCenterX - mMajorTickLength - 2f;
 
             /* Scale loaded background image (more efficient) if surface dimensions change. */
-            float scale = ((float) width) / (float) mBackgroundBitmap.getWidth();
+            if (mBackgroundBitmap != null) {
+                float scale = ((float) width) / (float) mBackgroundBitmap.getWidth();
 
-            mBackgroundBitmap = Bitmap.createScaledBitmap(mBackgroundBitmap,
-                    (int) (mBackgroundBitmap.getWidth() * scale),
-                    (int) (mBackgroundBitmap.getHeight() * scale), true);
+                mBackgroundBitmap = Bitmap.createScaledBitmap(mBackgroundBitmap,
+                        (int) (mBackgroundBitmap.getWidth() * scale),
+                        (int) (mBackgroundBitmap.getHeight() * scale), true);
 
-            /*
-             * Create a gray version of the image only if it will look nice on the device in
-             * ambient mode. That means we don't want devices that support burn-in
-             * protection (slight movements in pixels, not great for images going all the way to
-             * edges) and low ambient mode (degrades image quality).
-             *
-             * Also, if your watch face will know about all images ahead of time (users aren't
-             * selecting their own photos for the watch face), it will be more
-             * efficient to create a black/white version (png, etc.) and load that when you need it.
-             */
-            if (!mBurnInProtection && !mLowBitAmbient) {
-                initGrayBackgroundBitmap();
+                /*
+                 * Create a gray version of the image only if it will look nice on the device in
+                 * ambient mode. That means we don't want devices that support burn-in
+                 * protection (slight movements in pixels, not great for images going all the way to
+                 * edges) and low ambient mode (degrades image quality).
+                 *
+                 * Also, if your watch face will know about all images ahead of time (users aren't
+                 * selecting their own photos for the watch face), it will be more
+                 * efficient to create a black/white version (png, etc.) and load that when you need it.
+                 */
+                if (!mBurnInProtection && !mLowBitAmbient) {
+                    initGrayBackgroundBitmap();
+                }
             }
         }
 
@@ -452,12 +481,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
         private void drawBackground(Canvas canvas) {
 
-            if (mAmbient && (mLowBitAmbient || mBurnInProtection)) {
+            if (mAmbient && (mLowBitAmbient || mBurnInProtection || mGrayBackgroundBitmap == null)) {
                 canvas.drawColor(Color.BLACK);
             } else if (mAmbient) {
                 canvas.drawBitmap(mGrayBackgroundBitmap, 0, 0, mBackgroundPaint);
-            } else {
+            } else if (mBackgroundBitmap != null) {
                 canvas.drawBitmap(mBackgroundBitmap, 0, 0, mBackgroundPaint);
+            } else {
+                canvas.drawColor(BACKGROUND_COLOR);
             }
 
 
