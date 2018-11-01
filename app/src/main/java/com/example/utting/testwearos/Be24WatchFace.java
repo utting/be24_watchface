@@ -84,17 +84,19 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
     private class Engine extends CanvasWatchFaceService.Engine {
         public static final String LOGO = "Be24";
-        private static final float LOGO_POS_Y = 0.5f;  // relative to mCenterY.
+        private static final float LOGO_POS_Y = 0.75f;  // relative to mCenterY.
         private static final float LOGO_FONT_SIZE = 24;
         private static final float NUMBERS_FONT_SIZE = 18;
-        private static final float HOUR_STROKE_WIDTH = 5f;
-        private static final float TICK_STROKE_WIDTH = 3f;
+        private static final float HOUR_STROKE_WIDTH = 4f;
         private static final float LINE_STROKE_WIDTH = 2f;
-        private static final float TICK_LENGTH = 0.15f;  // percentage of watch radius.
+        private static final float MAJOR_TICK_STROKE_WIDTH = 5f;
+        private static final float MINOR_TICK_STROKE_WIDTH = 2f;
+        private static final float MAJOR_TICK_LENGTH = 0.10f;  // percentage of watch radius.
+        private static final float MINOR_TICK_LENGTH = 0.05f;  // percentage of watch radius.
 
         private static final float CENTER_GAP_AND_CIRCLE_RADIUS = 4f;
 
-        private static final int SHADOW_RADIUS = 6;
+        private static final int SHADOW_RADIUS = 4;
         /* Handler to update the time once a second in interactive mode. */
         private final Handler mUpdateTimeHandler = new EngineHandler(this);
         private Calendar mCalendar;
@@ -157,14 +159,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private void initializeBackground() {
             mNightPaint = new Paint();
             mNightPaint.setColor(Color.BLACK);
-            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bg);
+            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sunrise);
 
             /* Extracts colors from background image to improve watchface style. */
             Palette.from(mBackgroundBitmap).generate(new Palette.PaletteAsyncListener() {
                 @Override
                 public void onGenerated(Palette palette) {
                     if (palette != null) {
-                        mWatchHandHighlightColor = palette.getVibrantColor(Color.CYAN);
+                        mWatchHandHighlightColor = palette.getVibrantColor(Color.LTGRAY);
                         mWatchHandColor = palette.getLightVibrantColor(Color.WHITE);
                         mWatchHandShadowColor = palette.getDarkMutedColor(Color.BLACK);
                         // Log.d("onGenerated", palette.toString());
@@ -186,42 +188,31 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             mHandPaint = new Paint();
             mHandPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
-            mHandPaint.setAntiAlias(true);
             mHandPaint.setStrokeCap(Paint.Cap.ROUND);
-            mHandPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mHandInnerPaint = new Paint();
             mHandInnerPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
-            mHandInnerPaint.setAntiAlias(true);
             mHandInnerPaint.setStrokeCap(Paint.Cap.ROUND);
-            mHandInnerPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mLinePaint = new Paint();
             mLinePaint.setStrokeWidth(LINE_STROKE_WIDTH);
-            mLinePaint.setAntiAlias(true);
             mLinePaint.setStrokeCap(Paint.Cap.ROUND);
-            mLinePaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mMajorPaint = new Paint();
-            mMajorPaint.setStrokeWidth(TICK_STROKE_WIDTH);
-            mMajorPaint.setAntiAlias(true);
+            mMajorPaint.setStrokeWidth(MAJOR_TICK_STROKE_WIDTH);
             mMajorPaint.setStyle(Paint.Style.STROKE);
-            mMajorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mMinorPaint = new Paint();
-            mMinorPaint.setStrokeWidth(TICK_STROKE_WIDTH);
-            mMinorPaint.setAntiAlias(true);
+            mMinorPaint.setStrokeWidth(MINOR_TICK_STROKE_WIDTH);
             mMinorPaint.setStyle(Paint.Style.STROKE);
-            mMinorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
-            mNumbersPaint = new Paint();
 
+            mNumbersPaint = new Paint();
             mNumbersPaint.setStrokeWidth(LINE_STROKE_WIDTH);
             mNumbersPaint.setAntiAlias(true);
             mNumbersPaint.setStrokeCap(Paint.Cap.BUTT);
             mNumbersPaint.setStyle(Paint.Style.FILL);
             mNumbersPaint.setTypeface(Typeface.SANS_SERIF);
             mNumbersPaint.setTextSize(NUMBERS_FONT_SIZE);
-            mNumbersPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mLogoPaint = new Paint();
             mLogoPaint.setStrokeWidth(LINE_STROKE_WIDTH);
@@ -230,7 +221,6 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             mLogoPaint.setStyle(Paint.Style.FILL);
             mLogoPaint.setTypeface(Typeface.SANS_SERIF);
             mLogoPaint.setTextSize(LOGO_FONT_SIZE);
-            mLogoPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
 
             mLogoOffset = mLogoPaint.measureText(LOGO) / 2f;
         }
@@ -295,7 +285,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 mHandInnerPaint.setColor(mWatchHandHighlightColor);
                 mLinePaint.setColor(mWatchHandHighlightColor);
                 mMajorPaint.setColor(mWatchHandColor);
-                mMinorPaint.setColor(mWatchHandColor);
+                mMinorPaint.setColor(mWatchHandHighlightColor);
                 mNumbersPaint.setColor(mWatchHandHighlightColor);
                 mLogoPaint.setColor(mWatchHandHighlightColor);
 
@@ -311,7 +301,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 mHandInnerPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mLinePaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mMajorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
-                mMinorPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
+                mMinorPaint.setShadowLayer(SHADOW_RADIUS / 2f, 0, 0, mWatchHandShadowColor);
                 mNumbersPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
                 mLogoPaint.setShadowLayer(SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
             }
@@ -347,10 +337,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             /*
              * Calculate lengths of hands based on watch screen size.
              */
-            mMajorTickLength = mCenterX * TICK_LENGTH;
-            mMinorTickLength = mMajorTickLength / 3f;
+            mMajorTickLength = mCenterX * MAJOR_TICK_LENGTH;
+            mMinorTickLength = mCenterX * MINOR_TICK_LENGTH;
             // leave one pixel clearance, to avoid any friction.
-            mHourHandLength = mCenterX - mMajorTickLength - 1f;
+            mHourHandLength = mCenterX - mMajorTickLength - 2f;
 
             /* Scale loaded background image (more efficient) if surface dimensions change. */
             float scale = ((float) width) / (float) mBackgroundBitmap.getWidth();
@@ -404,7 +394,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 case TAP_TYPE_TAP:
                     // The user has completed the tap gesture.
                     // TODO: Add code to handle the tap gesture.
-                    Toast.makeText(getApplicationContext(), R.string.message, Toast.LENGTH_SHORT)
+                    String time = mCalendar.getTime().toString();
+                    Toast.makeText(getApplicationContext(), R.string.message + time, Toast.LENGTH_SHORT)
                             .show();
                     break;
             }
@@ -418,7 +409,6 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             drawBackground(canvas);
             drawWatchFace(canvas);
-
 
             /*
              * These calculations reflect that one hour = 360/24 = 15 degrees.
@@ -447,7 +437,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             }
 
 
-            // TODO: integrate this oldl code:
+            // TODO: integrate this sunrise/set code:
             /*
             // the sunrise-sunset pie
             float nightAngle = 360f - (mSunSet - mSunRise);
@@ -468,6 +458,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
              * creates them on top of the photo.
              */
 
+            /*
             // Draw the hourly tick marks around the outside.
             // Each mark is drawn down the bottom of the watchface, starting from 0.
             float bottom = mCenterY * 2f;  // Y position of bottom of whole watchface
@@ -485,20 +476,48 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 }
                 canvas.rotate(15.0f, mCenterX, mCenterY);
             }
-
-            /* OLD CODE that does not rotate canvas.
-            float innerTickRadius = mCenterX - 10;
-            float outerTickRadius = mCenterX;
-            for (int tickIndex = 0; tickIndex < 24; tickIndex++) {
-                float tickRot = (float) (tickIndex * Math.PI * 2 / 24);
-                float innerX = (float) Math.sin(tickRot) * innerTickRadius;
-                float innerY = (float) -Math.cos(tickRot) * innerTickRadius;
-                float outerX = (float) Math.sin(tickRot) * outerTickRadius;
-                float outerY = (float) -Math.cos(tickRot) * outerTickRadius;
-                canvas.drawLine(mCenterX + innerX, mCenterY + innerY,
-                        mCenterX + outerX, mCenterY + outerY, mMajorPaint);
-            }
             */
+
+            /* Code that does not rotate canvas, so all numbers are upright. */
+            float innerTickRadius = mCenterX - mMajorTickLength;
+            float textRadius = mCenterX - mMajorTickLength - NUMBERS_FONT_SIZE;
+            float outerTickRadius = mCenterX;
+            double tickAngle = Math.PI * 2 / (24 * 4);
+            for (int tickIndex = 0; tickIndex < 24 * 4; tickIndex++) {
+                float tickRot = (float) (tickIndex * tickAngle);
+                final float outer;
+                final Paint paint;
+                if (tickIndex % 4 == 0) {
+                    // draw a major tick (for each hour)
+                    outer = outerTickRadius;
+                    paint = mMajorPaint;
+                } else {
+                    // draw a minor tick (for each 1/4 hour)
+                    if (mAmbient) {
+                        continue;
+                    }
+                    outer = innerTickRadius + mMinorTickLength;
+                    paint = mMinorPaint;
+                }
+                float innerX = (float) -Math.sin(tickRot) * innerTickRadius;
+                float innerY = (float) Math.cos(tickRot) * innerTickRadius;
+                float outerX = (float) -Math.sin(tickRot) * outer;
+                float outerY = (float) Math.cos(tickRot) * outer;
+                canvas.drawLine(mCenterX + innerX, mCenterY + innerY,
+                        mCenterX + outerX, mCenterY + outerY, paint);
+                // now draw the hour number
+                if (tickIndex % (3 * 4) == 0) {
+                    int hour = tickIndex / 4;
+                    String numStr = String.valueOf(hour);
+                    // calculate the centre of the text position
+                    float textX = (float) -Math.sin(tickRot) * textRadius;
+                    float textY = (float) Math.cos(tickRot) * textRadius;
+                    System.out.printf("%d (%.1f,%.1f) ", tickIndex, textX, textY);
+                    float textBottom = textY + NUMBERS_FONT_SIZE / 2f;
+                    float textLeft = textX - mNumbersPaint.measureText(numStr) / 2f;
+                    canvas.drawText(numStr, mCenterX + textLeft, mCenterY + textBottom, mNumbersPaint);
+                }
+            }
         }
 
         private void drawSimpleHand(Canvas canvas, float hoursRotation) {
