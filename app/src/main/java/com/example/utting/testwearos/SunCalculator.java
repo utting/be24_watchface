@@ -21,7 +21,7 @@ public class SunCalculator {
      * Calculate sunrise and sunset time, based on lat,lng.
      *
      */
-    private void calculateSunRiseSet(double lat, double lng, Calendar cal) {
+    public void calculateSunRiseSet(double lat, double lng, Calendar cal) {
         double longWest = lng;  // TODO: check what conversion is needed.
         int year = cal.get(Calendar.YEAR);
         int dayOfYear = cal.get(Calendar.DAY_OF_YEAR);
