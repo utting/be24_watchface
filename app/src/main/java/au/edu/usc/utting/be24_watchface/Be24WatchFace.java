@@ -286,13 +286,17 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             int alt = mHourHand.getHighlightColor();
             int shadow = mHourHand.getShadowColor();
 
-            switch (style % 2) {
+            switch (style % 3) {
                 case 0:
                     setHourHand(new HourHand(color, alt, shadow));
                     break;
 
                 case 1:
                     setHourHand(new HourHandOutlineTriangle(color, alt, shadow));
+                    break;
+
+                case 2:
+                    setHourHand(new HourHand3DTriangle(color, alt, shadow));
                     break;
             }
         }
