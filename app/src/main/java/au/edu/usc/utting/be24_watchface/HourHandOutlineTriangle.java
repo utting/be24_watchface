@@ -45,10 +45,10 @@ public class HourHandOutlineTriangle extends HourHand {
         // triangular hand with different colored centre
         canvas.drawPath(mHandPath, mHandInnerPaint);
         canvas.drawPath(mHandPath, mHandPaint);
-        // and a circle around the centre
 
+        // and a circle at the centre
         // Add this line if you want a filled centre.
-        // canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH - HOUR_STROKE_WIDTH, mHandInnerPaint);
+        canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, mHandInnerPaint);
         canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, mHandPaint);
 
         canvas.restore();

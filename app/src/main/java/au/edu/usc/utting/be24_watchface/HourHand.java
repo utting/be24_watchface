@@ -46,6 +46,7 @@ class HourHand {
         mHandPaint = new Paint();
         mHandPaint.setColor(mWatchHandColor);
         mHandPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
+        mHandPaint.setStyle(Paint.Style.STROKE);
         mHandPaint.setStrokeCap(Paint.Cap.ROUND);
         mHandPaint.setAntiAlias(true);
 
@@ -144,13 +145,13 @@ class HourHand {
                 mCenterX,
                 mCenterY,
                 CENTER_GAP_AND_CIRCLE_RADIUS,
-                mHandPaint);
+                mHandInnerPaint);
 
         canvas.drawCircle(
                 mCenterX,
                 mCenterY,
-                CENTER_GAP_AND_CIRCLE_RADIUS / 2f,
-                mHandInnerPaint);
+                CENTER_GAP_AND_CIRCLE_RADIUS,
+                mHandPaint);
 
         /* Restore the canvas' original orientation. */
         canvas.restore();

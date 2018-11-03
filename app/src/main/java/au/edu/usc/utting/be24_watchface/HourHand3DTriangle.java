@@ -44,7 +44,7 @@ public class HourHand3DTriangle extends HourHand {
         super.setGeometry(width, height, handLen);
 
         // create hand path
-        float startX = mCenterX - TRIANGLE_WIDTH * 1.5f;
+        float startX = mCenterX - TRIANGLE_WIDTH / 2f;
         float stopX = mCenterX + mHourHandLength;
         float offsetY = TRIANGLE_WIDTH / 2f;
 
@@ -92,7 +92,8 @@ public class HourHand3DTriangle extends HourHand {
         canvas.drawPath(mTopPath, mHandPaint);
         canvas.drawPath(mEndPath, mDarkerPaint);
         // and a little circle in the centre to look like a pin
-        canvas.drawCircle(mCenterX, mCenterY, 5, mDarkerPaint);
+        // (Disabled, since the join of the three sides is now the centre)
+        // canvas.drawCircle(mCenterX, mCenterY, 5, mDarkerPaint);
 
         // Add this line if you want a filled centre.
         // canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH - HOUR_STROKE_WIDTH, mHandInnerPaint);
