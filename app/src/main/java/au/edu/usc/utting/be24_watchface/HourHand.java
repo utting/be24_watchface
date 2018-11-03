@@ -4,7 +4,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
-import java.util.Calendar;
 
 import static au.edu.usc.utting.be24_watchface.Be24WatchFace.angle;
 
@@ -21,13 +20,6 @@ class HourHand {
     static final float HOUR_STROKE_WIDTH = 4f;
     private static final float CENTER_GAP_AND_CIRCLE_RADIUS = HOUR_STROKE_WIDTH * 2;
 
-    protected final int mWatchHandColor;
-    protected final int mWatchHandHighlightColor;
-    protected final int mWatchHandShadowColor;
-
-    protected Paint mHandPaint;
-    protected Paint mHandInnerPaint;
-
     protected float mCenterX;
     protected float mCenterY;
 
@@ -38,36 +30,14 @@ class HourHand {
     protected float mHourHandLength;
 
 
-    public HourHand(int mainColor, int highlightColor, int shadowColor) {
-        mWatchHandColor = mainColor;
-        mWatchHandHighlightColor = highlightColor;
-        mWatchHandShadowColor = shadowColor;
+    public HourHand() {
 
-        mHandPaint = new Paint();
-        mHandPaint.setColor(mWatchHandColor);
-        mHandPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
-        mHandPaint.setStyle(Paint.Style.STROKE);
-        mHandPaint.setStrokeCap(Paint.Cap.ROUND);
-        mHandPaint.setAntiAlias(true);
-
-        mHandInnerPaint = new Paint();
-        mHandInnerPaint.setColor(mWatchHandHighlightColor);
-        mHandInnerPaint.setStrokeWidth(0);
-        mHandInnerPaint.setStyle(Paint.Style.FILL);
-        mHandInnerPaint.setStrokeCap(Paint.Cap.ROUND);
-        mHandInnerPaint.setAntiAlias(true);
     }
 
-    public int getColor() {
-        return mWatchHandColor;
-    }
-
-    public int getHighlightColor() {
-        return mWatchHandHighlightColor;
-    }
-
-    public int getShadowColor() {
-        return mWatchHandShadowColor;
+    public HourHand(Paint[] normal, Paint[] ambient) {
+        // customise our paint objects as necessary
+        normal[Be24WatchFace.HAND1].setStrokeCap(Paint.Cap.ROUND);
+        ambient[Be24WatchFace.HAND1].setStrokeCap(Paint.Cap.ROUND);
     }
 
     /**
@@ -85,38 +55,6 @@ class HourHand {
         mHourHandLength = radius;
     }
 
-    public void updateWatchHandStyle(boolean mAmbient) {
-        if (mAmbient) {
-            mHandPaint.setColor(Color.WHITE);
-            mHandInnerPaint.setColor(Color.WHITE);
-
-            mHandPaint.setAntiAlias(false);
-            mHandInnerPaint.setAntiAlias(false);
-
-            mHandPaint.clearShadowLayer();
-            mHandInnerPaint.clearShadowLayer();
-
-        } else {
-            mHandPaint.setColor(mWatchHandColor);
-            mHandInnerPaint.setColor(mWatchHandHighlightColor);
-
-            mHandPaint.setAntiAlias(true);
-            mHandInnerPaint.setAntiAlias(true);
-
-            mHandPaint.setShadowLayer(Be24WatchFace.SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
-            mHandInnerPaint.setShadowLayer(Be24WatchFace.SHADOW_RADIUS, 0, 0, mWatchHandShadowColor);
-        }
-    }
-
-    /**
-     * This is typically just used during interruption filters.
-     * @param alpha 0..255.
-     */
-    public void setAlpha(int alpha) {
-        mHandPaint.setAlpha(alpha);
-        mHandInnerPaint.setAlpha(alpha);
-    }
-
     /**
      * This is the main drawing method that draws the watch hand.
      *
@@ -125,9 +63,11 @@ class HourHand {
      * (and restore the canvas afterwards of course).
      *
      * @param canvas
-     * @param hours  current time in hours: 0.00 .. 23.9999.
+     * @param hours current time in hours: 0.00 .. 23.9999.
+     * @param paint the set of paints to use (may be normal or ambient)
+     * @param ambient true means draw for ambient mode.
      */
-    public void drawHand(Canvas canvas, float hours) {
+    public void drawHand(Canvas canvas, float hours, Paint[] paint, boolean ambient) {
 
         /* Save the canvas state before we can begin to rotate it. */
         canvas.save();
@@ -139,19 +79,19 @@ class HourHand {
                 mCenterY,
                 mCenterX + mHourHandLength,
                 mCenterY,
-                mHandPaint);
+                paint[Be24WatchFace.HAND1]);
 
         canvas.drawCircle(
                 mCenterX,
                 mCenterY,
                 CENTER_GAP_AND_CIRCLE_RADIUS,
-                mHandInnerPaint);
+                paint[Be24WatchFace.HAND2]);
 
         canvas.drawCircle(
                 mCenterX,
                 mCenterY,
                 CENTER_GAP_AND_CIRCLE_RADIUS,
-                mHandPaint);
+                paint[Be24WatchFace.HAND1]);
 
         /* Restore the canvas' original orientation. */
         canvas.restore();

@@ -1,6 +1,7 @@
 package au.edu.usc.utting.be24_watchface;
 
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Path;
 
 /**
@@ -12,8 +13,7 @@ public class HourHandOutlineTriangle extends HourHand {
 
     private Path mHandPath;
 
-    public HourHandOutlineTriangle(int mainColor, int highlightColor, int shadowColor) {
-        super(mainColor, highlightColor, shadowColor);
+    public HourHandOutlineTriangle(Paint[] normal, Paint[] ambient) {
     }
 
     @Override
@@ -36,20 +36,20 @@ public class HourHandOutlineTriangle extends HourHand {
     }
 
     @Override
-    public void drawHand(Canvas canvas, float hours) {
+    public void drawHand(Canvas canvas, float hours, Paint[] paint, boolean ambient) {
 
         canvas.save();
         final float hoursRotation = Be24WatchFace.angle(hours);
         canvas.rotate(hoursRotation, mCenterX, mCenterY);
 
         // triangular hand with different colored centre
-        canvas.drawPath(mHandPath, mHandInnerPaint);
-        canvas.drawPath(mHandPath, mHandPaint);
+        canvas.drawPath(mHandPath, paint[Be24WatchFace.HAND2]);
+        canvas.drawPath(mHandPath, paint[Be24WatchFace.HAND1]);
 
         // and a circle at the centre
         // Add this line if you want a filled centre.
-        canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, mHandInnerPaint);
-        canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, mHandPaint);
+        canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, paint[Be24WatchFace.HAND2]);
+        canvas.drawCircle(mCenterX, mCenterY, TRIANGLE_WIDTH, paint[Be24WatchFace.HAND1]);
 
         canvas.restore();
     }

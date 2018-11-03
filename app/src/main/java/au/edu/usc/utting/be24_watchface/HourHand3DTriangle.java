@@ -14,29 +14,21 @@ public class HourHand3DTriangle extends HourHand {
     /** Determines how wide the base of the triangle is. */
     private static final float TRIANGLE_WIDTH = 20f;
 
+    private static final int BRIGHT_SIDE = Color.rgb(233, 250, 255);
+    private static final int DARK_SIDE = Color.rgb(150, 161, 163);
+    private static final int DARK_END = Color.rgb(100, 111, 113);
+
     private Path mTopPath;
     private Path mBotPath;
     private Path mEndPath;
-    protected final int mDarkerColor;
-    protected final Paint mDarkerPaint;
-
-    public HourHand3DTriangle(int mainColor, int highlightColor, int shadowColor) {
-        super(Color.rgb(233, 250, 255),
-                Color.rgb(150, 161, 163),
-                shadowColor);
 
 
-        // protected final int mWatchHandColor;
-        // protected final int mWatchHandHighlightColor;
-
-        mHandPaint.setStyle(Paint.Style.FILL);
-
-        mDarkerColor = Color.rgb(100, 111, 113);
-        mDarkerPaint = new Paint();
-        mDarkerPaint.setColor(mDarkerColor);
-        mDarkerPaint.setStrokeWidth(HOUR_STROKE_WIDTH);
-        mDarkerPaint.setStrokeCap(Paint.Cap.ROUND);
-        mDarkerPaint.setAntiAlias(true);
+    /**
+     * This class just uses the HAND2 paint (FILL mode) with its own custom colors.
+     * @param normal
+     * @param ambient
+     */
+    public HourHand3DTriangle(Paint[] normal, Paint[] ambient) {
     }
 
     @Override
@@ -81,16 +73,23 @@ public class HourHand3DTriangle extends HourHand {
 
 
     @Override
-    public void drawHand(Canvas canvas, float hours) {
+    public void drawHand(Canvas canvas, float hours, Paint[] paint, boolean ambient) {
 
         canvas.save();
         final float hoursRotation = Be24WatchFace.angle(hours);
         canvas.rotate(hoursRotation, mCenterX, mCenterY);
 
-        // triangular hand with different colored centre
-        canvas.drawPath(mBotPath, mHandInnerPaint);
-        canvas.drawPath(mTopPath, mHandPaint);
-        canvas.drawPath(mEndPath, mDarkerPaint);
+        // 3D triangular hand with different colored sides
+        Paint p = paint[Be24WatchFace.HAND2];
+        int oldColor = p.getColor();
+        p.setColor(BRIGHT_SIDE);
+        canvas.drawPath(mBotPath, p);
+        p.setColor(DARK_SIDE);
+        canvas.drawPath(mTopPath, p);
+        p.setColor(DARK_END);
+        canvas.drawPath(mEndPath, p);
+        p.setColor(oldColor);
+
         // and a little circle in the centre to look like a pin
         // (Disabled, since the join of the three sides is now the centre)
         // canvas.drawCircle(mCenterX, mCenterY, 5, mDarkerPaint);

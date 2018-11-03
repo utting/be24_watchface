@@ -55,11 +55,13 @@ public class Appointments {
 //        return Color.argb(127, r, g, b);
 
 
-        float[] hsv = new float[3];
-        Color.colorToHSV(color, hsv);
-        // hsv[1] = 0.5f;
-        hsv[2] = 0.5f;
-        return Color.HSVToColor(hsv);
+//        float[] hsv = new float[3];
+//        Color.colorToHSV(color, hsv);
+//        // hsv[1] = 0.5f;
+//        hsv[2] = 0.5f;
+//        return Color.HSVToColor(hsv);
+
+        return Be24WatchFace.BLUE72;  // same color for all calendars
     }
 
     public void addDummyAppointments() {
