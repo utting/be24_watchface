@@ -33,7 +33,7 @@ public class Appointments {
         public Appointment(float startHour, float endHour, int color) {
             this.startHour = startHour;
             this.endHour = endHour;
-            this.color = color;
+            this.color = adjustColor(color);
         }
     }
 
@@ -43,6 +43,23 @@ public class Appointments {
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeCap(Paint.Cap.BUTT);
         addDummyAppointments();
+    }
+
+    /** Adjusts color to look more compatible with the watchface color scheme. */
+    private int adjustColor(int color) {
+        // display the calendar colour, but overlaid on background colour so it is not too jarring.
+
+//        int r = Color.red(color);
+//        int g = Color.green(color);
+//        int b = Color.blue(color);
+//        return Color.argb(127, r, g, b);
+
+
+        float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+        // hsv[1] = 0.5f;
+        hsv[2] = 0.5f;
+        return Color.HSVToColor(hsv);
     }
 
     public void addDummyAppointments() {
@@ -72,7 +89,11 @@ public class Appointments {
         for (Appointment ap : mAppts) {
             float start = angle(ap.startHour);
             float sweep = angle(ap.endHour) - start;
-            mPaint.setColor(ambient ? Color.DKGRAY : ap.color);
+            if (ambient) {
+                mPaint.setColor(Color.GRAY);
+            } else {
+                mPaint.setColor(ap.color);
+            }
             canvas.drawArc(left, top, width, height, start, sweep, false, mPaint);
         }
     }
