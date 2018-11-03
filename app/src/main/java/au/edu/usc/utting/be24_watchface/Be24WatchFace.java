@@ -68,6 +68,15 @@ public class Be24WatchFace extends CanvasWatchFaceService {
     // two related colours that are used, together with white and black.
     private static final int COLOR_DEEP_BLUE = Color.rgb(10, 40,100);
     private static final int COLOR_BRIGHT_ORANGE = Color.rgb(230, 130,30);
+
+    // Colors from the 'Blue' Material Design palette:
+    // See: https://designguidelines.withgoogle.com/wearos/style/color.html
+    static final int BLUE20 = Color.parseColor("#071FF3");
+    static final int BLUE30 = Color.parseColor("#002A4D");
+    static final int BLUE40 = Color.parseColor("#0E3F66");
+    static final int BLUE55 = Color.parseColor("#14568C");
+    static final int BLUE65 = Color.parseColor("#1766A6");
+    static final int BLUE100 = Color.parseColor("#80C6FF");
     static final int BACKGROUND_COLOR = COLOR_DEEP_BLUE;
     static final int FOREGROUND_COLOR = COLOR_BRIGHT_ORANGE; // complementary
 
@@ -169,6 +178,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private float mSunsetAngle;
         private float mSunriseAngle;
 
+        private Appointments mAppointments;
+
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
@@ -188,6 +199,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             initializeBackground();
             initializeWatchFace();
+            mAppointments = new Appointments();
         }
 
         private void initializeBackground() {
@@ -466,10 +478,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                     // The user has completed the tap gesture.
                     float xdiff = x - mCenterX;
                     float ydiff = y - mCenterY;
-                    // if they tapped the centre, we will change the hour hand.
                     if (xdiff * xdiff + ydiff * ydiff < 20 * 20) {
+                        // they tapped the centre, so we change the style of the hour hand.
                         mHourHandStyle++;
                         setHourHandStyle(mHourHandStyle);
+                    } else if (y < mCenterY) {
+                        new CalendarViewer().showCalendars(getApplicationContext());
+                    } else {
+                        new CalendarViewer().showDay(getApplicationContext());
                     }
                     break;
             }
@@ -487,6 +503,12 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             final float hours = mCalendar.get(Calendar.HOUR) + mCalendar.get(Calendar.MINUTE) / 60f;
             mHourHand.drawHand(canvas, hours);
+
+            String hhmm = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE);
+            // debug real time
+            canvas.drawText(hhmm, mCenterX  - 20f, mCenterY * 1.75f, mLogoPaint);
+
+            mAppointments.drawAppointments(canvas, mAmbient);
         }
 
         private void drawBackground(Canvas canvas) {

@@ -44,7 +44,7 @@ public class HourHand3DTriangle extends HourHand {
         super.setGeometry(width, height, handLen);
 
         // create hand path
-        float startX = mCenterX - TRIANGLE_WIDTH;
+        float startX = mCenterX - TRIANGLE_WIDTH * 1.5f;
         float stopX = mCenterX + mHourHandLength;
         float offsetY = TRIANGLE_WIDTH / 2f;
 
