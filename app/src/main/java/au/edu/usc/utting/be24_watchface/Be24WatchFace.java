@@ -501,7 +501,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             drawBackground(canvas);
             drawWatchFace(canvas);
 
-            final float hours = mCalendar.get(Calendar.HOUR) + mCalendar.get(Calendar.MINUTE) / 60f;
+            final float hours = mCalendar.get(Calendar.HOUR_OF_DAY) + mCalendar.get(Calendar.MINUTE) / 60f;
             mHourHand.drawHand(canvas, hours);
 
             String hhmm = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE);

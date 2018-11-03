@@ -6,6 +6,8 @@ import android.graphics.Paint;
 
 import java.util.Calendar;
 
+import static au.edu.usc.utting.be24_watchface.Be24WatchFace.angle;
+
 /**
  * Superclass for drawing various kinds of hour hands.
  *
@@ -128,7 +130,7 @@ class HourHand {
 
         /* Save the canvas state before we can begin to rotate it. */
         canvas.save();
-        final float hoursRotation = Be24WatchFace.angle(hours);
+        final float hoursRotation = angle(hours);
         canvas.rotate(hoursRotation, mCenterX, mCenterY);
 
         canvas.drawLine(
