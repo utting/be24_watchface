@@ -46,8 +46,8 @@ import java.util.concurrent.TimeUnit;
 public class Be24WatchFace extends CanvasWatchFaceService {
     public static final String LOGO = "Be24";
     static final float LOGO_POS_Y = 0.65f;  // relative to mCenterY.
-    static final int LOGO_FONT_SIZE = 14;
-    static final int NUMBERS_FONT_SIZE = 24;
+    static final int LOGO_FONT_SIZE = 24;
+    static final int NUMBERS_FONT_SIZE = 36;
     static final float MAJOR_TICK_LENGTH = 0.10f;  // percentage of watch radius.
     static final float MINOR_TICK_LENGTH = 0.05f;  // percentage of watch radius.
 
@@ -113,11 +113,11 @@ public class Be24WatchFace extends CanvasWatchFaceService {
      * Converts a given number of hours (0..24) into the corresponding angle.
      * Note: 00 hours is at the bottom (which is 90 degrees).
      *
-     * @param time24
-     * @return angle in degrees (may be bigger than 360.0)
+     * @param time24 0..24.0 hours.
+     * @return angle in degrees (always in the range 0..360.0)
      */
     public static float angle(float time24) {
-        return time24 * 360f / 24f + 90.0f;
+        return (time24 * 360f / 24f + 90.0f) % 360f;
     }
 
 
@@ -205,7 +205,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             mCalendar.setTimeInMillis(now);
             SunCalculator sun = new SunCalculator();
             sun.calculateSunRiseSet(-26.84, 152.96, mCalendar);
-            mSunriseAngle = angle(sun.getSunrise());  // in degrees (from bottom)
+            mSunriseAngle = angle(sun.getSunrise());  // in degrees
             mSunsetAngle = angle(sun.getSunset());
             Log.d(TAG, "onCreate() sunrise=" + mSunriseAngle + " sunset=" + mSunsetAngle);
 
@@ -462,7 +462,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                         mHourHandStyle++;
                         setHourHandStyle(mHourHandStyle);
                     } else if (y < mCenterY) {
-                        new CalendarViewer().showCalendars(getApplicationContext());
+                        startService(new Intent(getApplicationContext(), CalendarQueryService.class));
+                        // new CalendarViewer().showCalendars(getApplicationContext());
                     } else {
                         new CalendarViewer().showDay(getApplicationContext());
                     }
@@ -504,12 +505,12 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 canvas.drawPaint(mPaint[BGND1]);
             }
 
-
             // the sunrise-sunset pie
             if (!mAmbient) {
-                float nightAngle = 360f - (mSunsetAngle - mSunriseAngle);
+                float nightAngle = (360f + mSunriseAngle - mSunsetAngle) % 360f;
                 float width = mCenterX * 2f;
                 float height = mCenterY * 2f;
+                Log.d(TAG, "sunset=" + mSunsetAngle + " night=" + nightAngle);
                 canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mPaint[BGND2]);
                 // canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mLinePaint);
             }
