@@ -41,22 +41,26 @@ class SunCalculatorTest {
 
     @Test
     void testUscDec() {
-        runTest(dec22, -26.71683, 153.057333, 4.51f, 18.40f);
+        // solar noon: 11:46:07
+        runTest(dec22, -26.71683, 153.057333, 4 + 51f/60f, 18 + 41f/60f);
     }
 
     @Test
     void testUscJun() {
-        runTest(jun22, -26.71683, 153.057333, 6.35f, 17.03f);
+        // solar noon: 11:49:41
+        runTest(jun22, -26.71683, 153.057333, 6 + 36f/60f, 17 + 03f/60f);
     }
 
     @Test
     void testBesanconDec() {
-        runTest(dec22, 47.24878, 6.01815, 8.20f, 16.48f);
+        // solar noon: 12:34:36
+        runTest(dec22, 47.246, 5.9876, 8 + 20f/60f, 16 + 49f/60f);
     }
 
     @Test
     void testBesanconJun() {
-        runTest(jun22, 47.24878, 6.01815, 5.39f, 21.35f);
+        // solar noon: 12:38:03
+        runTest(jun22, 47.246, 5.9876, 4 + 40f/60f, 20 + 36f/60f);
     }
 
     /**

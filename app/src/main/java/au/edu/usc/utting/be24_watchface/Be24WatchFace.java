@@ -1,9 +1,12 @@
 package au.edu.usc.utting.be24_watchface;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -12,10 +15,14 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ResultReceiver;
+import android.provider.CalendarContract;
 import android.support.v7.graphics.Palette;
+import android.support.wearable.provider.WearableCalendarContract;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
@@ -23,9 +30,13 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+
+import static au.edu.usc.utting.be24_watchface.Constants.TAG;
 
 
 /**
@@ -104,6 +115,18 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
     private static final String TAG = Be24WatchFace.class.getSimpleName();
 
+
+    private static final String[] INSTANCE_PROJECTION = {
+            CalendarContract.Instances._ID,
+            CalendarContract.Instances.EVENT_ID,
+            CalendarContract.Instances.TITLE,
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.ALL_DAY,
+            CalendarContract.Instances.DESCRIPTION,
+            CalendarContract.Instances.CALENDAR_COLOR, // or use EVENT_COLOR?
+    };
+
     /**
      * Handler message id for updating the time periodically in interactive mode.
      */
@@ -146,9 +169,32 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         }
     }
 
+//    public class CalendarReceiver extends ResultReceiver {
+//        public static final String APPOINTMENTS_LIST = "result";
+//
+//        CalendarReceiver(Handler handler) {
+//            super(handler);
+//        }
+//
+//        //...
+//        @Override
+//        protected void onReceiveResult(int resultCode, Bundle resultData) {
+//
+//            if(resultCode == 0){
+//                List<Appointments.Appointment> appts = (List<Appointments.Appointment>) resultData.getSerializable(APPOINTMENTS_LIST);
+//                Log.e(TAG, "GOT Appointments: " + appts.size());
+//                mAppointments = new Appointments(appts);
+//            } else {
+//                Log.e(TAG, "BAD RESULT FROM CalendarQueryService");
+//                // TODO: mReceiver.onError((Exception) resultData.getSerializable(PARAM_EXCEPTION));
+//            }
+//        }
+//    }
+
     private class Engine extends CanvasWatchFaceService.Engine {
 
         /* Handler to update the time once a second in interactive mode. */
+        // TODO: delete this, since once/minute is plenty?
         private final Handler mUpdateTimeHandler = new EngineHandler(this);
         private Calendar mCalendar;
         private final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -192,10 +238,29 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
         private Appointments mAppointments;
 
+        // private FusedLocationProviderClient mFusedLocationClient;
+
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
+            /* TODO: get location.
+             * See https://developer.android.com/training/location/retrieve-current
+
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+            mFusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            // Got last known location. In some rare situations this can be null.
+                            if (location != null) {
+                                // Logic to handle location object
+
+                            }
+                        }
+                    });
+            */
             setWatchFaceStyle(new WatchFaceStyle.Builder(Be24WatchFace.this)
                     .setAcceptsTapEvents(true)
                     .build());
@@ -212,7 +277,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             initializeBackground();
             initializeColors();
             initializeWatchFace();
-            mAppointments = new Appointments();
+            updateAppointments();
         }
 
         private void initializeColors() {
@@ -449,12 +514,15 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             switch (tapType) {
                 case TAP_TYPE_TOUCH:
                     // The user has started touching the screen.
+                    Log.i(TAG, "TAP_TYPE_TOUCH");
                     break;
                 case TAP_TYPE_TOUCH_CANCEL:
                     // The user has started a different gesture or otherwise cancelled the tap.
+                    Log.i(TAG, "TAP_TYPE_CANCEL");
                     break;
                 case TAP_TYPE_TAP:
                     // The user has completed the tap gesture.
+                    Log.i(TAG, "TAP_TYPE_TAP");
                     float xdiff = x - mCenterX;
                     float ydiff = y - mCenterY;
                     if (xdiff * xdiff + ydiff * ydiff < 20 * 20) {
@@ -462,14 +530,85 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                         mHourHandStyle++;
                         setHourHandStyle(mHourHandStyle);
                     } else if (y < mCenterY) {
-                        startService(new Intent(getApplicationContext(), CalendarQueryService.class));
+                        // they tapped the top, so we update appointments.
+                        updateAppointments();
+                        // Intent intent = new Intent(getApplicationContext(), CalendarQueryService.class);
+                        // TODO: pass CalendarReceiver listener to intent (or CalendarQueryService instance!)
+                        // intent.putExtra("resultreceiver", new CalendarReceiver(intent));
+                        // startService(intent);
                         // new CalendarViewer().showCalendars(getApplicationContext());
                     } else {
+                        // old stuff.
                         new CalendarViewer().showDay(getApplicationContext());
                     }
                     break;
             }
             invalidate();
+        }
+
+        /**
+         * Updates the appointments by reading the calendar.
+         *
+         * TODO: call this automatically, when day changes?
+         */
+        private void updateAppointments() {
+            Calendar cal = Calendar.getInstance();
+            long now = System.currentTimeMillis();
+            cal.setTimeInMillis(now);
+
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            long beginTime = cal.getTimeInMillis();
+
+            String beginStr = cal.getTime().toString();
+
+            cal.set(Calendar.HOUR_OF_DAY, 23);
+            cal.set(Calendar.MINUTE, 59);
+            long endTime = cal.getTimeInMillis();
+
+            String endStr = cal.getTime().toString();
+
+            List<Appointments.Appointment> appts = new ArrayList<>();
+
+            ContentResolver contentResolver = getContentResolver();
+            Uri.Builder builder = WearableCalendarContract.Instances.CONTENT_URI.buildUpon();
+            ContentUris.appendId(builder, beginTime);
+            ContentUris.appendId(builder, endTime);
+            Uri uri = builder.build();
+
+            Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
+                    null, null, null);
+
+            Log.e(TAG, "Queried events " + beginStr + ".." + endStr + ": " +
+                    uri.toString() + " gives count=" + cursor.getCount());
+            try {
+                int idIdx = cursor.getColumnIndex(CalendarContract.Instances._ID);
+                int eventIdIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID);
+                int titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE);
+                int beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN);
+                int endIdx = cursor.getColumnIndex(CalendarContract.Instances.END);
+                int allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY);
+                int descIdx = cursor.getColumnIndex(CalendarContract.Instances.DESCRIPTION);
+                int colorIdx = cursor.getColumnIndex(CalendarContract.Instances.CALENDAR_COLOR);
+
+                float ONE_HOUR = 1000f * 60f * 60f; // milliseconds in one hour
+                while (cursor.moveToNext()) {
+                    // appt.id = cursor.getLong(idIdx);
+                    // appt.eventId = cursor.getLong(eventIdIdx);
+                    String title = cursor.getString(titleIdx);
+                    float startHour = (cursor.getLong(beginIdx) - beginTime) / ONE_HOUR;
+                    float endHour = (cursor.getLong(endIdx) - beginTime) / ONE_HOUR;
+                    // appt.allDay = cursor.getInt(allDayIdx) != 0;
+                    // appt.description = cursor.getString(descIdx);
+                    int color = cursor.getInt(colorIdx);
+                    Log.e(TAG, "  Got event " + title);
+                    appts.add(new Appointments.Appointment(startHour, endHour, color));
+                }
+            } finally {
+                cursor.close();
+            }
+            mAppointments = new Appointments(appts);
         }
 
         @Override

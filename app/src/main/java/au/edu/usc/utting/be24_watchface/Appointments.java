@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -24,7 +25,7 @@ public class Appointments {
 
 
     /** Basic information for today's appointments. */
-    protected class Appointment {
+    protected static class Appointment implements Serializable {
         private float startHour;  // e.g. 13.5f for 1:30pm.
         private float endHour;
         private int color;  // shows which calendar it is from
@@ -35,19 +36,10 @@ public class Appointments {
             this.endHour = endHour;
             this.color = adjustColor(color);
         }
-    }
 
-
-    public Appointments() {
-        mPaint = new Paint();
-        mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setStrokeCap(Paint.Cap.BUTT);
-        addDummyAppointments();
-    }
-
-    /** Adjusts color to look more compatible with the watchface color scheme. */
-    private int adjustColor(int color) {
-        // display the calendar colour, but overlaid on background colour so it is not too jarring.
+        /** Adjusts color to look more compatible with the watchface color scheme. */
+        private int adjustColor(int color) {
+            // display the calendar colour, but overlaid on background colour so it is not too jarring.
 
 //        int r = Color.red(color);
 //        int g = Color.green(color);
@@ -61,17 +53,35 @@ public class Appointments {
 //        hsv[2] = 0.5f;
 //        return Color.HSVToColor(hsv);
 
-        return Be24WatchFace.BLUE72;  // same color for all calendars
+            return Be24WatchFace.BLUE72;  // same color for all calendars
+        }
     }
 
-    public void addDummyAppointments() {
+
+    public Appointments() {
+        this(dummyAppointments());
+    }
+
+
+    public Appointments(List<Appointment> appts) {
+        mPaint = new Paint();
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeCap(Paint.Cap.BUTT);
+        mAppts = appts;
+    }
+
+
+
+    protected static List<Appointment> dummyAppointments() {
         Calendar cal = Calendar.getInstance();
         long now = System.currentTimeMillis();
         cal.setTimeInMillis(now);
-        mAppts.add(new Appointment(1.0f, 3.0f, Color.YELLOW));
-        mAppts.add(new Appointment(9.0f, 10.0f, Color.YELLOW));
-        mAppts.add(new Appointment(10.0f, 11.5f, Color.GREEN));
-        mAppts.add(new Appointment(18.0f, 20.5f, Color.BLUE));
+        List<Appointment> result = new ArrayList<>();
+        result.add(new Appointment(1.0f, 3.0f, Color.YELLOW));
+        result.add(new Appointment(9.0f, 10.0f, Color.YELLOW));
+        result.add(new Appointment(10.0f, 11.5f, Color.GREEN));
+        result.add(new Appointment(18.0f, 20.5f, Color.BLUE));
+        return result;
     }
 
     /**

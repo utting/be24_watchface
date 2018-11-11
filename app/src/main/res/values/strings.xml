@@ -2,4 +2,5 @@
     <string name="app_name">Be24 Watch</string>
     <string name="message">What will tapping do?</string>
     <string name="my_analog_name">Be24 Watchface</string>
+    <string name="my_calendar_service">Get Calendar Events</string>
 </resources>
