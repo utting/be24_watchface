@@ -293,7 +293,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             mPaintNormal[TICK1].setColor(BLUE100);
             mPaintNormal[TICK2].setColor(AMBER72);
             mPaintNormal[HAND1].setColor(BLUE100);
-            mPaintNormal[HAND2].setColor(AMBER100);
+            mPaintNormal[HAND2].setColor(AMBER65);
             mPaintNormal[HOURS].setColor(AMBER72);
             mPaintNormal[APPTS].setColor(BLUE65);  // just a default
 
@@ -550,6 +550,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
          * Updates the appointments by reading the calendar.
          *
          * TODO: call this automatically, when day changes?
+         *
+         * NOTE: WearableCalendarContract does not sync all data now.
+         * See issue: https://issuetracker.google.com/issues/38476499
          */
         private void updateAppointments() {
             Calendar cal = Calendar.getInstance();
@@ -580,8 +583,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
                     null, null, null);
 
-            Log.e(TAG, "Queried events " + beginStr + ".." + endStr + ": " +
-                    uri.toString() + " gives count=" + cursor.getCount());
+            long then = System.currentTimeMillis();
+
+            Log.e(TAG, "Queried events " + beginStr + ".." + endStr +
+                    " gives count=" + cursor.getCount() + " in " + (then - now) + "ms.");
             try {
                 int idIdx = cursor.getColumnIndex(CalendarContract.Instances._ID);
                 int eventIdIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID);
@@ -602,7 +607,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                     // appt.allDay = cursor.getInt(allDayIdx) != 0;
                     // appt.description = cursor.getString(descIdx);
                     int color = cursor.getInt(colorIdx);
-                    Log.e(TAG, "  Got event " + title);
+                    Log.e(TAG, "  Got event " + startHour + " .. " + endHour + ": " + title);
                     appts.add(new Appointments.Appointment(startHour, endHour, color));
                 }
             } finally {
