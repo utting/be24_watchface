@@ -53,7 +53,8 @@ public class Appointments {
 //        hsv[2] = 0.5f;
 //        return Color.HSVToColor(hsv);
 
-            return Be24WatchFace.BLUE72;  // same color for all calendars
+//            return Be24WatchFace.BLUE72;  // same color for all calendars
+            return color;
         }
     }
 
@@ -100,7 +101,7 @@ public class Appointments {
         float height = canvas.getHeight() - penWidth / 2f;
         for (Appointment ap : mAppts) {
             float start = angle(ap.startHour);
-            float sweep = angle(ap.endHour) - start;
+            float sweep = (360f + angle(ap.endHour) - start) % 360f;
             if (ambient) {
                 mPaint.setColor(Color.GRAY);
             } else {
