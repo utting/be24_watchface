@@ -10,6 +10,7 @@ import java.util.Calendar;
 import java.util.List;
 
 import static au.edu.usc.utting.be24_watchface.Be24WatchFace.angle;
+import static au.edu.usc.utting.be24_watchface.Be24WatchFace.sweep;
 
 /**
  * Holds basic information about instances of calendar appointments for the current day.
@@ -45,7 +46,6 @@ public class Appointments {
         /** Adjusts color to look more compatible with the watchface color scheme. */
         private int adjustColor(int color) {
             // display the calendar colour, but overlaid on background colour so it is not too jarring.
-
 //        int r = Color.red(color);
 //        int g = Color.green(color);
 //        int b = Color.blue(color);
@@ -85,18 +85,21 @@ public class Appointments {
         float width = canvas.getWidth() - penWidth / 2f;
         float height = canvas.getHeight() - penWidth / 2f;
         for (Appointment ap : mAppts) {
-            float start = angle(ap.startHour);
-            float sweep = (360f + angle(ap.endHour) - start) % 360f;
-            if (ambient) {
-                mPaint.setColor(Color.GRAY);
-            } else {
-                mPaint.setColor(ap.color);
-            }
+            float start;
+            float sweep;
             if (ap.allDay) {
                 // we default to the working day
                 start = angle(ALL_DAY_START);
                 sweep = ALL_DAY_LENGTH * 360f / 24f;
                 mPaint.setColor(Color.DKGRAY);
+            } else {
+                start = angle(ap.startHour);
+                sweep = sweep(ap.startHour, ap.endHour);
+                if (ambient) {
+                    mPaint.setColor(Color.GRAY);
+                } else {
+                    mPaint.setColor(ap.color);
+                }
             }
             canvas.drawArc(left, top, width, height, start, sweep, false, mPaint);
         }

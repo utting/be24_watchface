@@ -22,7 +22,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.CalendarContract;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.graphics.Palette;
 import android.support.wearable.provider.WearableCalendarContract;
@@ -38,8 +37,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-
-import static au.edu.usc.utting.be24_watchface.Constants.TAG;
 
 
 /**
@@ -108,7 +105,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
     static final int HAND1 = 6; // primary color for the outline of the hand
     static final int HAND2 = 7; // alt color for interior of the hand
     static final int HOURS = 8; // the hour numbers
-    static final int APPTS = 9; // paint for the appointments (color may vary)
+    static final int APPTS = 9; // default paint for the appointments (color may vary)
 
     /*
      * Update rate in milliseconds for interactive mode.
@@ -147,6 +144,16 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         return (time24 * 360f / 24f + 90.0f) % 360f;
     }
 
+    /**
+     * Calculates the angle between two times (in hours).
+     *
+     * @param start24 start time 0..24.0 hours.
+     * @param end24 end time 0..24.0 hours.
+     * @return sweep angle in degrees (always in the range 0..360.0)
+     */
+    public static float sweep(float start24, float end24) {
+        return ((24.0f + end24 - start24) * (360f / 24f)) % 360f;
+    }
 
     @Override
     public Engine onCreateEngine() {
@@ -238,10 +245,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private boolean mLowBitAmbient;
         private boolean mBurnInProtection;
 
+        /** Angle in degrees (0=east) where sunset happens. */
         private float mSunsetAngle;
-        private float mSunriseAngle;
+        /** Sweep angle of night duration. */
+        private float mNightAngle;
 
         private Appointments mAppointments = null;
+        /** the hour (0..23) that appointments were last updated. */
+        private int mUpdateHour = -1;
 
         // private FusedLocationProviderClient mFusedLocationClient;
 
@@ -274,10 +285,13 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
             SunCalculator sun = new SunCalculator();
+            // TODO: get current lat/long
             sun.calculateSunRiseSet(-26.84, 152.96, mCalendar);
-            mSunriseAngle = angle(sun.getSunrise());  // in degrees
-            mSunsetAngle = angle(sun.getSunset());
-            Log.d(TAG, "onCreate() sunrise=" + mSunriseAngle + " sunset=" + mSunsetAngle);
+            float sunriseHour = sun.getSunrise();
+            float sunsetHour = sun.getSunset();
+            mSunsetAngle = angle(sunsetHour);
+            mNightAngle = sweep(sunsetHour, sunriseHour);
+            Log.d(TAG, "onCreate() sunrise=" + sunriseHour + " sunset=" + sunsetHour);
 
             initializeBackground();
             initializeColors();
@@ -412,6 +426,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             super.onPropertiesChanged(properties);
             mLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
             mBurnInProtection = properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false);
+            Log.d(TAG, "set lowBitAmbient=" + mLowBitAmbient
+                    + " burnInProtection=" + mBurnInProtection);
         }
 
         @Override
@@ -447,6 +463,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             /* Dim display in mute mode. */
             if (mMuteMode != inMuteMode) {
                 mMuteMode = inMuteMode;
+                Log.d(TAG, "setting muteMode = " + mMuteMode);
                 for (int i = 0; i < mPaintNormal.length; i++) {
                     mPaintNormal[i].setAlpha(inMuteMode ? 100 : 255);
                     mPaintAmbient[i].setAlpha(inMuteMode ? 100 : 255);
@@ -567,6 +584,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
          * See issue: https://issuetracker.google.com/issues/38476499
          */
         private void updateAppointments() {
+            mUpdateHour = mCalendar.get(Calendar.HOUR_OF_DAY);
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_CALENDAR)
                     != PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "No READ_CALENDAR permission.");
@@ -579,7 +597,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 cal.setTimeInMillis(now);
 
                 cal.set(Calendar.HOUR_OF_DAY, 0);
-                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.MINUTE, 1); // so we do not include all-day events from yesterday?
                 cal.set(Calendar.SECOND, 0);
                 long beginTime = cal.getTimeInMillis();
 
@@ -599,14 +617,17 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 ContentUris.appendId(builder, endTime);
                 Uri uri = builder.build();
 
-                Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
-                        null, null, null);
+                try (Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
+                        null, null, null)) {
+                    if (cursor == null) {
+                        mAppointments = null;
+                        return;
+                    }
+                    long then = System.currentTimeMillis();
 
-                long then = System.currentTimeMillis();
-
-                Log.e(TAG, "Query calendar events " + beginStr + ".." + endStr +
-                        " gives count=" + cursor.getCount() + " in " + (then - now) + "ms.");
-                try {
+                    Log.e(TAG, "Query calendar events " + beginStr + ".." + endStr +
+                            " timezone=" + cal.getTimeZone() +
+                            " gives count=" + cursor.getCount() + " in " + (then - now) + "ms.");
                     int idIdx = cursor.getColumnIndex(CalendarContract.Instances._ID);
                     int eventIdIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID);
                     int titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE);
@@ -631,10 +652,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                         appts.add(allDay ? 0 : appts.size(),
                                 new Appointments.Appointment(startHour, endHour, allDay, color));
                     }
-                } finally {
-                    cursor.close();
+                    mAppointments = new Appointments(appts);
                 }
-                mAppointments = new Appointments(appts);
             }
         }
 
@@ -650,6 +669,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             final float hours = mCalendar.get(Calendar.HOUR_OF_DAY) + mCalendar.get(Calendar.MINUTE) / 60f;
             mHourHand.drawHand(canvas, hours, mPaint, mAmbient);
 
+            if (mUpdateHour != mCalendar.get(Calendar.HOUR_OF_DAY)) {
+                // once an hour (or when user taps) we try to update appointments.
+                updateAppointments();
+            }
             if (mAppointments != null) {
                 mAppointments.drawAppointments(canvas, mAmbient);
             }
@@ -671,12 +694,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             // the sunrise-sunset pie
             if (!mAmbient) {
-                float nightAngle = (360f + mSunriseAngle - mSunsetAngle) % 360f;
                 float width = mCenterX * 2f;
                 float height = mCenterY * 2f;
-                Log.d(TAG, "sunset=" + mSunsetAngle + " night=" + nightAngle);
-                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mPaint[BGND2]);
-                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mPaint[BGND3]);
+                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND2]);
+                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND3]);
             }
             canvas.drawText(LOGO, mCenterX - mLogoOffset, mCenterY * LOGO_POS_Y, mPaint[LOGO1]);
         }

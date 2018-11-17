@@ -16,6 +16,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    testOptions {
+        // because Log.d(...) is not mocked.
+        // See http://tools.android.com/tech-docs/unit-testing-support#TOC-Method-...-not-mocked.-
+        unitTests.returnDefaultValues = true
+    }
 }
 
 dependencies {
