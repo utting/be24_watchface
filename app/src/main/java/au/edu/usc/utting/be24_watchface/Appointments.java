@@ -19,21 +19,26 @@ import static au.edu.usc.utting.be24_watchface.Be24WatchFace.angle;
  * @author Mark Utting
  */
 public class Appointments {
+    /** The start time and length (in hours) of 'all day' appointments. */
+    private static final float ALL_DAY_START = 7.0f;
+    private static final float ALL_DAY_LENGTH = 10.0f;
 
-    private List<Appointment> mAppts = new ArrayList<>();
-    private Paint mPaint;
+    private final List<Appointment> mAppts;
+    private final Paint mPaint;
 
 
     /** Basic information for today's appointments. */
     protected static class Appointment implements Serializable {
         private float startHour;  // e.g. 13.5f for 1:30pm.
         private float endHour;
+        private boolean allDay;
         private int color;  // shows which calendar it is from
 
 
-        public Appointment(float startHour, float endHour, int color) {
+        public Appointment(float startHour, float endHour, boolean allDay, int color) {
             this.startHour = startHour;
             this.endHour = endHour;
+            this.allDay = allDay;
             this.color = adjustColor(color);
         }
 
@@ -58,31 +63,11 @@ public class Appointments {
         }
     }
 
-
-    public Appointments() {
-        this(dummyAppointments());
-    }
-
-
     public Appointments(List<Appointment> appts) {
         mPaint = new Paint();
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeCap(Paint.Cap.BUTT);
         mAppts = appts;
-    }
-
-
-
-    protected static List<Appointment> dummyAppointments() {
-        Calendar cal = Calendar.getInstance();
-        long now = System.currentTimeMillis();
-        cal.setTimeInMillis(now);
-        List<Appointment> result = new ArrayList<>();
-        result.add(new Appointment(1.0f, 3.0f, Color.YELLOW));
-        result.add(new Appointment(9.0f, 10.0f, Color.YELLOW));
-        result.add(new Appointment(10.0f, 11.5f, Color.GREEN));
-        result.add(new Appointment(18.0f, 20.5f, Color.BLUE));
-        return result;
     }
 
     /**
@@ -106,6 +91,12 @@ public class Appointments {
                 mPaint.setColor(Color.GRAY);
             } else {
                 mPaint.setColor(ap.color);
+            }
+            if (ap.allDay) {
+                // we default to the working day
+                start = angle(ALL_DAY_START);
+                sweep = ALL_DAY_LENGTH * 360f / 24f;
+                mPaint.setColor(Color.DKGRAY);
             }
             canvas.drawArc(left, top, width, height, start, sweep, false, mPaint);
         }

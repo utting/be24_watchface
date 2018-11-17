@@ -125,7 +125,7 @@ public class CalendarQueryService extends IntentService
             float startHour = event.begin;
             float endHour = event.end;
             int color = event.color;
-            appts.add(new Appointments.Appointment(startHour, endHour, color));
+            appts.add(new Appointments.Appointment(startHour, endHour, false, color));
             /*
             final PutDataMapRequest putDataMapRequest = event.toPutDataMapRequest();
             if (mGoogleApiClient.isConnected()) {

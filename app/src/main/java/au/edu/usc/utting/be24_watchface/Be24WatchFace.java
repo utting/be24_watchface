@@ -1,11 +1,13 @@
 package au.edu.usc.utting.be24_watchface;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -19,8 +21,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.ResultReceiver;
 import android.provider.CalendarContract;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.graphics.Palette;
 import android.support.wearable.provider.WearableCalendarContract;
 import android.support.wearable.watchface.CanvasWatchFaceService;
@@ -98,13 +101,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
     // These names are used to index the mPaint array inside the engine.
     static final int BGND1 = 0; // main background color
     static final int BGND2 = 1; // 'night-time' background color
-    static final int LOGO1 = 2; // the logo (e.g. "Be24")
-    static final int TICK1 = 3; // main tick marks
-    static final int TICK2 = 4; // secondary tick marks
-    static final int HAND1 = 5; // primary color for the outline of the hand
-    static final int HAND2 = 6; // alt color for interior of the hand
-    static final int HOURS = 7; // the hour numbers
-    static final int APPTS = 8; // paint for the appointments (color may vary)
+    static final int BGND3 = 2; // for fine lines on the background
+    static final int LOGO1 = 3; // the logo (e.g. "Be24")
+    static final int TICK1 = 4; // main tick marks
+    static final int TICK2 = 5; // secondary tick marks
+    static final int HAND1 = 6; // primary color for the outline of the hand
+    static final int HAND2 = 7; // alt color for interior of the hand
+    static final int HOURS = 8; // the hour numbers
+    static final int APPTS = 9; // paint for the appointments (color may vary)
 
     /*
      * Update rate in milliseconds for interactive mode.
@@ -201,6 +205,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 mCalendar.setTimeZone(TimeZone.getDefault());
+                updateAppointments(); // since timezone changes will move appointments.
                 invalidate();
             }
         };
@@ -224,8 +229,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
          * depending upon what mode we are in.
          */
         private Paint[] mPaint = null;
-        private Paint[] mPaintNormal = new Paint[9];
-        private Paint[] mPaintAmbient = new Paint[9];
+        private Paint[] mPaintNormal = new Paint[APPTS + 1];
+        private Paint[] mPaintAmbient = new Paint[APPTS + 1];
 
         private Bitmap mBackgroundBitmap;
         private Bitmap mGrayBackgroundBitmap;
@@ -236,7 +241,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         private float mSunsetAngle;
         private float mSunriseAngle;
 
-        private Appointments mAppointments;
+        private Appointments mAppointments = null;
 
         // private FusedLocationProviderClient mFusedLocationClient;
 
@@ -289,6 +294,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             }
             mPaintNormal[BGND1].setColor(BLUE30);
             mPaintNormal[BGND2].setColor(BLUE20);
+            mPaintNormal[BGND3].setColor(AMBER55);
             mPaintNormal[LOGO1].setColor(AMBER72);
             mPaintNormal[TICK1].setColor(BLUE100);
             mPaintNormal[TICK2].setColor(AMBER72);
@@ -299,6 +305,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             // Customise some paints/fonts.
             // these paints are used for drawing lines (the others default to FILL)
+            mPaintNormal[BGND3].setStyle(Paint.Style.STROKE);
+            mPaintNormal[BGND3].setStrokeWidth(1);
+
             mPaintNormal[TICK1].setStyle(Paint.Style.STROKE);
             mPaintNormal[TICK1].setStrokeWidth(5);
 
@@ -320,6 +329,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             // then override the colors to shades of gray.
             mPaintAmbient[BGND1].setColor(Color.BLACK);
             mPaintAmbient[BGND2].setColor(Color.BLACK);
+            mPaintAmbient[BGND3].setColor(Color.GRAY); // not shown in ambient mode
             mPaintAmbient[LOGO1].setColor(Color.GRAY);
             mPaintAmbient[TICK1].setColor(Color.WHITE);
             mPaintAmbient[TICK2].setColor(Color.GRAY); // not shown in ambient mode
@@ -549,71 +559,83 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         /**
          * Updates the appointments by reading the calendar.
          *
-         * TODO: call this automatically, when day changes?
+         * If READ_CALENDAR permissions are not turned on, no appointments are shown.
+         *
+         * TODO: call this automatically, when day or timezone changes?
          *
          * NOTE: WearableCalendarContract does not sync all data now.
          * See issue: https://issuetracker.google.com/issues/38476499
          */
         private void updateAppointments() {
-            Calendar cal = Calendar.getInstance();
-            long now = System.currentTimeMillis();
-            cal.setTimeInMillis(now);
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_CALENDAR)
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.i(TAG, "No READ_CALENDAR permission.");
+                mAppointments = null;
+            } else {
+                // String[] perms = {Manifest.permission.READ_CALENDAR};
+                // TODO: ?? ActivityCompat.requestPermissions(this, perms, 0);
+                Calendar cal = Calendar.getInstance();
+                long now = System.currentTimeMillis();
+                cal.setTimeInMillis(now);
 
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            long beginTime = cal.getTimeInMillis();
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                long beginTime = cal.getTimeInMillis();
 
-            String beginStr = cal.getTime().toString();
+                String beginStr = cal.getTime().toString();
 
-            cal.set(Calendar.HOUR_OF_DAY, 23);
-            cal.set(Calendar.MINUTE, 59);
-            long endTime = cal.getTimeInMillis();
+                cal.set(Calendar.HOUR_OF_DAY, 23);
+                cal.set(Calendar.MINUTE, 59);
+                long endTime = cal.getTimeInMillis();
 
-            String endStr = cal.getTime().toString();
+                String endStr = cal.getTime().toString();
 
-            List<Appointments.Appointment> appts = new ArrayList<>();
+                List<Appointments.Appointment> appts = new ArrayList<>();
 
-            ContentResolver contentResolver = getContentResolver();
-            Uri.Builder builder = WearableCalendarContract.Instances.CONTENT_URI.buildUpon();
-            ContentUris.appendId(builder, beginTime);
-            ContentUris.appendId(builder, endTime);
-            Uri uri = builder.build();
+                ContentResolver contentResolver = getContentResolver();
+                Uri.Builder builder = WearableCalendarContract.Instances.CONTENT_URI.buildUpon();
+                ContentUris.appendId(builder, beginTime);
+                ContentUris.appendId(builder, endTime);
+                Uri uri = builder.build();
 
-            Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
-                    null, null, null);
+                Cursor cursor = contentResolver.query(uri, INSTANCE_PROJECTION,
+                        null, null, null);
 
-            long then = System.currentTimeMillis();
+                long then = System.currentTimeMillis();
 
-            Log.e(TAG, "Queried events " + beginStr + ".." + endStr +
-                    " gives count=" + cursor.getCount() + " in " + (then - now) + "ms.");
-            try {
-                int idIdx = cursor.getColumnIndex(CalendarContract.Instances._ID);
-                int eventIdIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID);
-                int titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE);
-                int beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN);
-                int endIdx = cursor.getColumnIndex(CalendarContract.Instances.END);
-                int allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY);
-                int descIdx = cursor.getColumnIndex(CalendarContract.Instances.DESCRIPTION);
-                int colorIdx = cursor.getColumnIndex(CalendarContract.Instances.CALENDAR_COLOR);
+                Log.e(TAG, "Query calendar events " + beginStr + ".." + endStr +
+                        " gives count=" + cursor.getCount() + " in " + (then - now) + "ms.");
+                try {
+                    int idIdx = cursor.getColumnIndex(CalendarContract.Instances._ID);
+                    int eventIdIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID);
+                    int titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE);
+                    int beginIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN);
+                    int endIdx = cursor.getColumnIndex(CalendarContract.Instances.END);
+                    int allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY);
+                    int descIdx = cursor.getColumnIndex(CalendarContract.Instances.DESCRIPTION);
+                    int colorIdx = cursor.getColumnIndex(CalendarContract.Instances.CALENDAR_COLOR);
 
-                float ONE_HOUR = 1000f * 60f * 60f; // milliseconds in one hour
-                while (cursor.moveToNext()) {
-                    // appt.id = cursor.getLong(idIdx);
-                    // appt.eventId = cursor.getLong(eventIdIdx);
-                    String title = cursor.getString(titleIdx);
-                    float startHour = (cursor.getLong(beginIdx) - beginTime) / ONE_HOUR;
-                    float endHour = (cursor.getLong(endIdx) - beginTime) / ONE_HOUR;
-                    // appt.allDay = cursor.getInt(allDayIdx) != 0;
-                    // appt.description = cursor.getString(descIdx);
-                    int color = cursor.getInt(colorIdx);
-                    Log.e(TAG, "  Got event " + startHour + " .. " + endHour + ": " + title);
-                    appts.add(new Appointments.Appointment(startHour, endHour, color));
+                    float ONE_HOUR = 1000f * 60f * 60f; // milliseconds in one hour
+                    while (cursor.moveToNext()) {
+                        // appt.id = cursor.getLong(idIdx);
+                        // appt.eventId = cursor.getLong(eventIdIdx);
+                        String title = cursor.getString(titleIdx);
+                        float startHour = (cursor.getLong(beginIdx) - beginTime) / ONE_HOUR;
+                        float endHour = (cursor.getLong(endIdx) - beginTime) / ONE_HOUR;
+                        boolean allDay = cursor.getInt(allDayIdx) != 0;
+                        // appt.description = cursor.getString(descIdx);
+                        int color = cursor.getInt(colorIdx);
+                        Log.e(TAG, "  Got event allDay=" + allDay + " " + startHour + " .. " + endHour + ": " + title);
+                        // put all-day appointments at the beginning, so they are underneath the others.
+                        appts.add(allDay ? 0 : appts.size(),
+                                new Appointments.Appointment(startHour, endHour, allDay, color));
+                    }
+                } finally {
+                    cursor.close();
                 }
-            } finally {
-                cursor.close();
+                mAppointments = new Appointments(appts);
             }
-            mAppointments = new Appointments(appts);
         }
 
         @Override
@@ -628,11 +650,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             final float hours = mCalendar.get(Calendar.HOUR_OF_DAY) + mCalendar.get(Calendar.MINUTE) / 60f;
             mHourHand.drawHand(canvas, hours, mPaint, mAmbient);
 
-            // debugging: show the current time as a string
-            // String hhmm = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE);
-            // canvas.drawText(hhmm, mCenterX  - 20f, mCenterY * 1.75f, mPaint[LOGO1]);
-
-            mAppointments.drawAppointments(canvas, mAmbient);
+            if (mAppointments != null) {
+                mAppointments.drawAppointments(canvas, mAmbient);
+            }
         }
 
         private void drawBackground(Canvas canvas) {
@@ -656,7 +676,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 float height = mCenterY * 2f;
                 Log.d(TAG, "sunset=" + mSunsetAngle + " night=" + nightAngle);
                 canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mPaint[BGND2]);
-                // canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mLinePaint);
+                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, nightAngle, true, mPaint[BGND3]);
             }
             canvas.drawText(LOGO, mCenterX - mLogoOffset, mCenterY * LOGO_POS_Y, mPaint[LOGO1]);
         }
