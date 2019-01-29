@@ -17,6 +17,7 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -30,6 +31,10 @@ import android.support.wearable.watchface.WatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -254,29 +259,52 @@ public class Be24WatchFace extends CanvasWatchFaceService {
         /** the hour (0..23) that appointments were last updated. */
         private int mUpdateHour = -1;
 
-        // private FusedLocationProviderClient mFusedLocationClient;
+        private double latitude = -26.84;
+        private double longitude = 152.96;
+        private String locMsg = "default";
+        private FusedLocationProviderClient mFusedLocationClient;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
-            /* TODO: get location.
+            /* get location.
              * See https://developer.android.com/training/location/retrieve-current
+             */
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
 
-            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+            // We ask for last location just once, when watch face starts.
+            // TODO: repeat it each week or so.
+            OnSuccessListener listen = new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    // Got last known location. In some rare situations this can be null.
+                    if (location != null) {
+                        // Logic to handle location object
+                        latitude = location.getLatitude();
+                        longitude = location.getLongitude();
+                        locMsg = String.format("%.4f,%.4f", latitude, longitude);
+                        Log.d(TAG, "got lat,long=" + locMsg);
 
-            mFusedLocationClient.getLastLocation()
-                    .addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                        @Override
-                        public void onSuccess(Location location) {
-                            // Got last known location. In some rare situations this can be null.
-                            if (location != null) {
-                                // Logic to handle location object
+                        // update sunrise/set calculations
+                        long now = System.currentTimeMillis();
+                        mCalendar.setTimeInMillis(now);
+                        SunCalculator sun = new SunCalculator();
+                        sun.calculateSunRiseSet(latitude, longitude, mCalendar);
+                        float sunriseHour = sun.getSunrise();
+                        float sunsetHour = sun.getSunset();
+                        mSunsetAngle = angle(sunsetHour);
+                        mNightAngle = sweep(sunsetHour, sunriseHour);
+                        Log.d(TAG, "new sunrise=" + sunriseHour + " sunset=" + sunsetHour);
+                    }
+                }
+            };
+            try {
+                mFusedLocationClient.getLastLocation().addOnSuccessListener(listen);
+            } catch (SecurityException ex) {
+                Log.d(TAG, "onCreate() location permissions denied.");
+            }
 
-                            }
-                        }
-                    });
-            */
             setWatchFaceStyle(new WatchFaceStyle.Builder(Be24WatchFace.this)
                     .setAcceptsTapEvents(true)
                     .build());
@@ -285,8 +313,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
             SunCalculator sun = new SunCalculator();
-            // TODO: get current lat/long
-            sun.calculateSunRiseSet(-26.84, 152.96, mCalendar);
+            sun.calculateSunRiseSet(latitude, longitude, mCalendar);
             float sunriseHour = sun.getSunrise();
             float sunsetHour = sun.getSunset();
             mSunsetAngle = angle(sunsetHour);
@@ -700,6 +727,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND3]);
             }
             canvas.drawText(LOGO, mCenterX - mLogoOffset, mCenterY * LOGO_POS_Y, mPaint[LOGO1]);
+
+            // DEBUG
+            // canvas.drawText(locMsg, mCenterX - 100, mCenterY + 100, mPaint[LOGO1]);
         }
 
         private void drawWatchFace(Canvas canvas) {
