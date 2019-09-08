@@ -695,11 +695,11 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             Log.d(TAG, "onDraw with mAmbient=" + mAmbient);
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
+            final float hours = mCalendar.get(Calendar.HOUR_OF_DAY) + mCalendar.get(Calendar.MINUTE) / 60f;
 
             drawBackground(canvas);
-            drawWatchFace(canvas);
+            drawWatchFace(canvas, hours);
 
-            final float hours = mCalendar.get(Calendar.HOUR_OF_DAY) + mCalendar.get(Calendar.MINUTE) / 60f;
             mHourHand.drawHand(canvas, hours, mPaint, mAmbient);
 
             if (mUpdateHour != mCalendar.get(Calendar.HOUR_OF_DAY)) {
@@ -738,7 +738,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             // canvas.drawText(locMsg, mCenterX - 100, mCenterY + 100, mPaint[LOGO1]);
         }
 
-        private void drawWatchFace(Canvas canvas) {
+        private void drawWatchFace(Canvas canvas, float hours) {
 
             /*
              * Draw ticks. Usually you will want to bake this directly into the photo, but in
@@ -768,22 +768,22 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
             /* Code that does not rotate canvas, so all numbers are upright. */
             float innerTickRadius = mCenterX - mMajorTickLength;
-            float textRadius = innerTickRadius - NUMBERS_FONT_SIZE * 0.7f;
             float outerTickRadius = mCenterX;
             double tickAngle = Math.PI * 2 / (24 * 4);
             for (int tickIndex = 0; tickIndex < 24 * 4; tickIndex++) {
                 float tickRot = (float) (tickIndex * tickAngle);
+                int hour = tickIndex / 4;
                 boolean draw = false;
                 float outer = 0f;
                 Paint paint = null;
                 if (tickIndex % 4 == 0) {
                     // draw a major tick (for each hour)
-                    draw = true;
+                    draw = sameQuadrant(hour, hours) || (hour % 6 == 0); // was: true;
                     outer = outerTickRadius;
                     paint = mPaint[TICK1];
                 } else if (!mAmbient) {
                     // draw a minor tick (for each 1/4 hour)
-                    draw = true;
+                    draw = sameQuadrant(hour, hours);  // was: true;
                     outer = innerTickRadius + mMinorTickLength;
                     paint = mPaint[TICK2];
                 }
@@ -796,18 +796,34 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                             mCenterX + outerX, mCenterY + outerY, paint);
                     // now draw the hour number
                     if (tickIndex % (3 * 4) == 0) {
-                        int hour = tickIndex / 4;
-                        String numStr = String.valueOf(hour);
-                        // calculate the centre of the text position
-                        float textX = (float) -Math.sin(tickRot) * textRadius;
-                        float textY = (float) Math.cos(tickRot) * textRadius;
-                        System.out.printf("%d (%.1f,%.1f) ", tickIndex, textX, textY);
-                        float textLeft = mCenterX + textX - mPaint[HOURS].measureText(numStr) / 2f;
-                        float textBottom = mCenterY + textY + NUMBERS_FONT_SIZE / 2f;
-                        canvas.drawText(numStr, textLeft, textBottom, mPaint[HOURS]);
+                        drawHourNumber(canvas, tickRot, hour);
                     }
                 }
             }
+        }
+
+        /**
+         * True iff hour is in the quadrant of the watch where the current time is.
+         *
+         * @param hour
+         * @param hours
+         * @return
+         */
+        private boolean sameQuadrant(int hour, float hours) {
+            return hour / 6 == ((int) hours) / 6;
+        }
+
+        private void drawHourNumber(Canvas canvas, float tickRot, int hour) {
+            float innerTickRadius = mCenterX - mMajorTickLength;
+            float textRadius = innerTickRadius - NUMBERS_FONT_SIZE * 0.7f;
+            String numStr = String.valueOf(hour);
+            // calculate the centre of the text position
+            float textX = (float) -Math.sin(tickRot) * textRadius;
+            float textY = (float) Math.cos(tickRot) * textRadius;
+            // System.out.printf("%d (%.1f,%.1f) ", hour, textX, textY);
+            float textLeft = mCenterX + textX - mPaint[HOURS].measureText(numStr) / 2f;
+            float textBottom = mCenterY + textY + NUMBERS_FONT_SIZE / 2f;
+            canvas.drawText(numStr, textLeft, textBottom, mPaint[HOURS]);
         }
 
         @Override
