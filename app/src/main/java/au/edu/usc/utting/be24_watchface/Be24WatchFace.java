@@ -140,7 +140,8 @@ public class Be24WatchFace extends CanvasWatchFaceService {
 
     /**
      * Converts a given number of hours (0..24) into the corresponding angle.
-     * Note: 00 hours is at the bottom (which is 90 degrees).
+     * Note: 00 hours is at the bottom (South).
+     * Note: East=0 degrees, South=90 degrees, West=180, North=270.
      *
      * @param time24 0..24.0 hours.
      * @return angle in degrees (always in the range 0..360.0)
@@ -150,11 +151,11 @@ public class Be24WatchFace extends CanvasWatchFaceService {
     }
 
     /**
-     * Calculates the angle between two times (in hours).
+     * Calculates the clockwise sweep angle between two times.
      *
      * @param start24 start time 0..24.0 hours.
      * @param end24 end time 0..24.0 hours.
-     * @return sweep angle in degrees (always in the range 0..360.0)
+     * @return sweep angle in degrees clockwise (always in the range 0..360.0)
      */
     public static float sweep(float start24, float end24) {
         return ((24.0f + end24 - start24) * (360f / 24f)) % 360f;
@@ -295,7 +296,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                         float sunsetHour = sun.getSunset();
                         mSunsetAngle = angle(sunsetHour);
                         mNightAngle = sweep(sunsetHour, sunriseHour);
-                        Log.d(TAG, "new sunrise=" + sunriseHour + " sunset=" + sunsetHour);
+                        Log.d(TAG, String.format("new lat,long=%.4f,%.4f" +
+                                        " sunrise/set=%.2f..%.2f (night=%.1f+=%.1f deg)",
+                                latitude, longitude,
+                                sunriseHour, sunsetHour, mSunsetAngle, mNightAngle));
                     }
                 }
             };
@@ -318,8 +322,10 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             float sunsetHour = sun.getSunset();
             mSunsetAngle = angle(sunsetHour);
             mNightAngle = sweep(sunsetHour, sunriseHour);
-            Log.d(TAG, "onCreate() sunrise=" + sunriseHour + " sunset=" + sunsetHour);
-
+            Log.d(TAG, String.format("onCreate() lat,long=%.4f,%.4f" +
+                    " sunrise/set=%.2f..%.2f (night=%.1f+=%.1f deg)",
+                    latitude, longitude,
+                    sunriseHour, sunsetHour, mSunsetAngle, mNightAngle));
             initializeBackground();
             initializeColors();
             initializeWatchFace();

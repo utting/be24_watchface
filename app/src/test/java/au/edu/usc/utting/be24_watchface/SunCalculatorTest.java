@@ -74,4 +74,20 @@ class SunCalculatorTest {
         // solar noon: 12:38:03 + 1 hour daylight saving
         runTest(jun22, 47.246, 5.9876, 5 + 39f/60f, 21 + 35f/60f);
     }
+
+
+    /**
+     * Sunrise/set times were showing incorrectly in Besançon, early Sep 2019.
+     * Roughly: Sunrise at 10pm and sunset at 9:40am.
+     * Result was that this calculation was correct, and rebuilding the app
+     * fixed the display error.
+     */
+    @Test
+    void testBesanconSep() {
+        Locale france = new Locale("fr", "fr");
+        Calendar sep = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"), france);
+        sep.set(2019, 9 - 1, 8, 0, 0, 0);
+        // solar noon: 1:33pm + 1 hour daylight saving
+        runTest(sep, 47.246, 5.9876, 7 + 03f/60f, 20 + 02f/60f);
+    }
 }

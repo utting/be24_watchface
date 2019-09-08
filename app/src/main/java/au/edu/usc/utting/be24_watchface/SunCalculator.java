@@ -108,7 +108,7 @@ public class SunCalculator {
         else if (localT < 0) {
             localT = localT + 24;
         }
-        // System.out.println("offset=" + offset + " raw=" + offset0 + " localT=" + localT);
+        // System.out.println("offset=" + offset + " sunrise=" + sunrise + " localT=" + localT);
         return localT;
     }
 
