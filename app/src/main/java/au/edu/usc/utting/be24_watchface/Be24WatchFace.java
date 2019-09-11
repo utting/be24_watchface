@@ -356,7 +356,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
             mPaintNormal[BGND3].setStrokeWidth(1);
 
             mPaintNormal[TICK1].setStyle(Paint.Style.STROKE);
-            mPaintNormal[TICK1].setStrokeWidth(5);
+            mPaintNormal[TICK1].setStrokeWidth(3);
 
             mPaintNormal[TICK2].setStyle(Paint.Style.STROKE);
             mPaintNormal[TICK2].setStrokeWidth(2);
@@ -730,7 +730,9 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 float width = mCenterX * 2f;
                 float height = mCenterY * 2f;
                 canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND2]);
-                canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND3]);
+                // This puts a thin brighter line along the edge of the sunrise/set line.
+                // (but this can look confusingly like another hand, second hand, etc.)
+                // canvas.drawArc(0f, 0f, width, height, mSunsetAngle, mNightAngle, true, mPaint[BGND3]);
             }
             canvas.drawText(LOGO, mCenterX - mLogoOffset, mCenterY * LOGO_POS_Y, mPaint[LOGO1]);
 
@@ -774,12 +776,17 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                 float tickRot = (float) (tickIndex * tickAngle);
                 int hour = tickIndex / 4;
                 boolean draw = false;
-                float outer = 0f;
+                float inner = innerTickRadius; // inner radius of this tick mark
+                float outer = outerTickRadius; // outer radius of this tick mark
                 Paint paint = null;
-                if (tickIndex % 4 == 0) {
+                if (tickIndex % (3 * 4) == 0) {
+                    // draw a major tick (for each six hours)
+                    draw = true;
+                    // inner = mCenterX - 2 * mMajorTickLength;
+                    paint = mPaint[TICK1];
+                } else if (tickIndex % 4 == 0) {
                     // draw a major tick (for each hour)
                     draw = sameQuadrant(hour, hours) || (hour % 6 == 0); // was: true;
-                    outer = outerTickRadius;
                     paint = mPaint[TICK1];
                 } else if (!mAmbient) {
                     // draw a minor tick (for each 1/4 hour)
@@ -788,14 +795,14 @@ public class Be24WatchFace extends CanvasWatchFaceService {
                     paint = mPaint[TICK2];
                 }
                 if (draw) {
-                    float innerX = (float) -Math.sin(tickRot) * innerTickRadius;
-                    float innerY = (float) Math.cos(tickRot) * innerTickRadius;
+                    float innerX = (float) -Math.sin(tickRot) * inner;
+                    float innerY = (float) Math.cos(tickRot) * inner;
                     float outerX = (float) -Math.sin(tickRot) * outer;
                     float outerY = (float) Math.cos(tickRot) * outer;
                     canvas.drawLine(mCenterX + innerX, mCenterY + innerY,
                             mCenterX + outerX, mCenterY + outerY, paint);
                     // now draw the hour number
-                    if (tickIndex % (3 * 4) == 0) {
+                    if (!mAmbient && tickIndex % (3 * 4) == 0) {
                         drawHourNumber(canvas, tickRot, hour);
                     }
                 }
@@ -810,7 +817,7 @@ public class Be24WatchFace extends CanvasWatchFaceService {
          * @return
          */
         private boolean sameQuadrant(int hour, float hours) {
-            return hour / 6 == ((int) hours) / 6;
+            return hour / 3 == ((int) hours) / 3;
         }
 
         private void drawHourNumber(Canvas canvas, float tickRot, int hour) {
